@@ -16,7 +16,6 @@ app.add_middleware(
 app.mount("/static", StaticFiles(directory="static"), name="static")
 # Tạo bảng nếu chưa có
 models.Base.metadata.create_all(bind=database.engine)
-
 # Gắn các router
 app.include_router(ws_stream.router)
 app.include_router(camera.router, prefix="/api/camera", tags=["Camera"])

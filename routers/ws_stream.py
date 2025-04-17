@@ -24,7 +24,7 @@ async def websocket_stream(websocket: WebSocket, cam_id: int):
                 cap.set(cv2.CAP_PROP_POS_FRAMES, 0)
                 continue
 
-            frame = run_detection_frame(frame)
+            frame = run_detection_frame(frame, cam_id)
             _, buffer = cv2.imencode('.jpg', frame)
             b64 = base64.b64encode(buffer).decode('utf-8')
 
