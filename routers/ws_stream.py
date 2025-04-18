@@ -3,6 +3,7 @@ from yolov8.detect import run_detection_frame, VIDEO_PATHS
 import cv2
 import base64
 import asyncio
+import json
 
 router = APIRouter()
 
@@ -24,12 +25,16 @@ async def websocket_stream(websocket: WebSocket, cam_id: int):
                 cap.set(cv2.CAP_PROP_POS_FRAMES, 0)
                 continue
 
-            frame = run_detection_frame(frame, cam_id)
+            frame, show_warning = run_detection_frame(frame, cam_id)
+
             _, buffer = cv2.imencode('.jpg', frame)
             b64 = base64.b64encode(buffer).decode('utf-8')
 
             try:
-                await websocket.send_text(b64)
+                await websocket.send_text(json.dumps({
+                    "image": b64,
+                    "warning": show_warning
+                }))
             except WebSocketDisconnect:
                 print(f"WebSocket ngắt kết nối (camera {cam_id})")
                 break
@@ -39,4 +44,3 @@ async def websocket_stream(websocket: WebSocket, cam_id: int):
     finally:
         cap.release()
         print(f"Đã dừng stream camera {cam_id}")
-

@@ -6,7 +6,7 @@ import numpy as np
 from yolov8.shared_state import latest_stats
 from yolov8.tracker import Tracker
 
-model = YOLO("weights/best.pt")
+model = YOLO("weights/best_yolov8_4class.pt")
 tracker = Tracker()
 
 VIDEO_PATHS = {
@@ -17,11 +17,10 @@ VIDEO_PATHS = {
     5: 0
 }
 
-CLASS_NAMES = ["Person", "Safety", "No-Safety"]
+CLASS_NAMES = ["Person", "Safety", "No-Safety", "Machinery"]
 
 # dict theo dõi vi phạm mỗi người
 violation_timers = {}
-
 def update_map_cv(positions, colors, cam_id=1):
     width, height = 400, 400
 
@@ -78,7 +77,10 @@ def run_detection_frame(frame, cam_id=0):
     persons = {}
     safeties = []
     no_safeties = []
+    machinery = 0
 
+    person_list = []
+    machinery_list = []
     for i, class_id in enumerate(classes):
         box = coords[i]
         x1, y1, x2, y2 = map(int, box)
@@ -86,10 +88,21 @@ def run_detection_frame(frame, cam_id=0):
 
         if label == "Person":
             persons[(x1, y1, x2, y2)] = {"safety": False, "no_safety": False}
+            person_list.append((x1, y1, x2, y2))
+
         elif label == "Safety":
             safeties.append((x1, y1, x2, y2))
+
         elif label == "No-Safety":
             no_safeties.append((x1, y1, x2, y2))
+
+        elif label == "Machinery":
+            machinery += 1
+            machinery_list.append((x1, y1, x2, y2))
+            color = (255, 165, 0)
+            cv2.rectangle(frame, (x1, y1), (x2, y2), color, 2)
+            cv2.putText(frame, "Machinery", (x1, y1 - 10),
+                        cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 2)
 
     for s_box in safeties:
         for p_box in persons:
@@ -132,7 +145,13 @@ def run_detection_frame(frame, cam_id=0):
             color = (0, 255, 0)
             tag = "blue"
             safety += 1
-
+        elif label == "Machinery":
+            machinery += 1
+            x1, y1, x2, y2 = map(int, box)
+            color = (255, 165, 0)  # orange
+            cv2.rectangle(frame, (x1, y1), (x2, y2), color, 2)
+            cv2.putText(frame, "Machinery", (x1, y1 - 10),
+                        cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 2)
         cv2.rectangle(frame, (x1, y1), (x2, y2), color, 2)
         cv2.putText(frame, "Person", (x1, y1 - 10),
                     cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 2)
@@ -198,22 +217,26 @@ def run_detection_frame(frame, cam_id=0):
         "total": total,
         "safety": safety,
         "no_safety": no_safety,
+        "machinery": machinery,
         "fps": round(fps, 2)
     })
+    show_warning = False
 
-    return frame
+    for px1, py1, px2, py2 in person_list:
+        for mx1, my1, mx2, my2 in machinery_list:
+            if px1 >= mx1 and py1 >= my1 and px2 <= mx2 and py2 <= my2:
+                show_warning = True
+                break
 
-    elapsed = (datetime.now() - start_time).total_seconds()
-    fps = 1 / elapsed if elapsed > 0 else 0
-
-    latest_stats.update({
-        "total": total,
-        "safety": safety,
-        "no_safety": no_safety,
-        "fps": round(fps, 2)
-    })
-
-    return frame
+    if show_warning:
+        cv2.putText(frame,
+                    "WARNING: Person in Machinery!",
+                    (20, 40),
+                    cv2.FONT_HERSHEY_SIMPLEX,
+                    0.9,
+                    (0, 0, 255),
+                    3)
+    return frame, show_warning
 
 
 def run_detection(cam_id: int):

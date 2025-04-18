@@ -9,5 +9,6 @@ def get_stats():
         "total": latest_stats["total"],
         "safety": latest_stats["safety"],
         "no_safety": latest_stats["no_safety"],
+        "machinery": latest_stats.get("machinery", 0),
         "fps": latest_stats["fps"]
     }
