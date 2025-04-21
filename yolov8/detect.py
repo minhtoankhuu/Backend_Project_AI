@@ -228,14 +228,14 @@ def run_detection_frame(frame, cam_id=0):
                 show_warning = True
                 break
 
-    if show_warning:
-        cv2.putText(frame,
-                    "WARNING: Person in Machinery!",
-                    (20, 40),
-                    cv2.FONT_HERSHEY_SIMPLEX,
-                    0.9,
-                    (0, 0, 255),
-                    3)
+    # if show_warning:
+    #     cv2.putText(frame,
+    #                 "WARNING: Person in Machinery!",
+    #                 (20, 40),
+    #                 cv2.FONT_HERSHEY_SIMPLEX,
+    #                 0.9,
+    #                 (0, 0, 255),
+    #                 3)
     return frame, show_warning
 
 

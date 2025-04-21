@@ -51,6 +51,7 @@ async def websocket_stream(websocket: WebSocket, cam_id: int):
                 "total": latest_stats.get("total", 0),
                 "safety": latest_stats.get("safety", 0),
                 "no_safety": latest_stats.get("no_safety", 0),
+                "machinery": latest_stats.get("machinery", 0),
                 "fps": latest_stats.get("fps", 0)
             }
 
