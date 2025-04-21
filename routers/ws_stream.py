@@ -1,9 +1,12 @@
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 from yolov8.detect import run_detection_frame, VIDEO_PATHS
+from yolov8.shared_state import latest_stats
+
 import cv2
 import base64
 import asyncio
 import json
+from pathlib import Path
 
 router = APIRouter()
 
@@ -17,6 +20,11 @@ async def websocket_stream(websocket: WebSocket, cam_id: int):
     fps = cap.get(cv2.CAP_PROP_FPS) or 25
     delay = max(1 / fps, 0.04)
 
+ # Đường dẫn tới file bản đồ
+    map_path = Path(f"static/map/2d_map_cam{cam_id}.png")
+    if not map_path.exists():
+        map_path = Path("static/map/no_video.png")
+        
     try:
         while cap.isOpened():
             ret, frame = cap.read()
@@ -30,11 +38,29 @@ async def websocket_stream(websocket: WebSocket, cam_id: int):
             _, buffer = cv2.imencode('.jpg', frame)
             b64 = base64.b64encode(buffer).decode('utf-8')
 
+ # Lấy dữ liệu bản đồ
             try:
-                await websocket.send_text(json.dumps({
+                with open(map_path, "rb") as f:
+                    b64_map = base64.b64encode(f.read()).decode('utf-8')
+            except Exception as e:
+                b64_map = None
+                print(f"Lỗi khi đọc bản đồ: {e}")
+
+            # Lấy dữ liệu thống kê
+            stats = {
+                "total": latest_stats.get("total", 0),
+                "safety": latest_stats.get("safety", 0),
+                "no_safety": latest_stats.get("no_safety", 0),
+                "fps": latest_stats.get("fps", 0)
+            }
+
+            try:
+                await websocket.send_json({
                     "image": b64,
+                    "map": b64_map,
+                    "stats": stats,
                     "warning": show_warning
-                }))
+                })
             except WebSocketDisconnect:
                 print(f"WebSocket ngắt kết nối (camera {cam_id})")
                 break
